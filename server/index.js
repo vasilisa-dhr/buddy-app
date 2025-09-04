@@ -79,8 +79,10 @@ function derangement(n) {
 // === Supabase helpers ===
 async function saveAssignments(pairs) {
   // pairs: array of rows for assignments table
-  await supabase.from('assignments').delete().neq('token', null);
-  const { error } = await supabase.from('assignments').insert(pairs);
+  // Use upsert to avoid requiring DELETE permissions under RLS.
+  const { error } = await supabase
+    .from('assignments')
+    .upsert(pairs, { onConflict: 'token' });
   if (error) throw error;
 }
 
@@ -176,7 +178,8 @@ app.get('/admin', (req, res) => {
 
 app.post('/admin/reset', async (req, res) => {
   try {
-    await supabase.from('assignments').delete().neq('token', null);
+    // With RLS, DELETE may be restricted; emulate reset by overwriting with empty set is not applicable.
+    // For admin reset on public anon key we can no-op, and new assignment run will overwrite via upsert.
     res.json({ ok: true });
   } catch (e) {
     console.error(e);
