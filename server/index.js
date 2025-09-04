@@ -149,6 +149,20 @@ app.post('/api/assign', async (req, res) => {
   }
 });
 
+// Helper: export current personal links (tokens) for distribution
+app.get('/admin/links.csv', (req, res) => {
+  const people = loadColleaguesWithTokens();
+  const header = 'Имя,Ссылка\n';
+  let csv = header;
+  for (const p of people) {
+    const claimUrl = `/claim/${p.token}`;
+    csv += `${p.name},${claimUrl}\n`;
+  }
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="links.csv"');
+  res.send(csv);
+});
+
 app.get('/api/whoami/:token', (req, res) => {
   const people = loadColleaguesWithTokens();
   const me = people.find(p => p.token === req.params.token);
