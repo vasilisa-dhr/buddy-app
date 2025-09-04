@@ -146,8 +146,9 @@ app.post('/api/assign', async (req, res) => {
     const assignee = row ? people.find(p => p.token === row.receiver_token) : null;
     return res.json({ assignee });
   } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: 'internal error', detail: String(e && e.message ? e.message : e) });
+    console.error('assign error', e);
+    const detail = e && (e.message || e.details || e.hint) ? (e.message || e.details || e.hint) : e;
+    return res.status(500).json({ error: 'internal error', detail, raw: JSON.stringify(e) });
   }
 });
 
@@ -205,8 +206,9 @@ app.get('/admin/export.csv', async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename="assignments.csv"');
     res.send(csv);
   } catch (e) {
-    console.error(e);
-    res.status(500).send('failed: ' + String(e && e.message ? e.message : e));
+    console.error('export error', e);
+    const detail = e && (e.message || e.details || e.hint) ? (e.message || e.details || e.hint) : e;
+    res.status(500).send('failed: ' + detail);
   }
 });
 
