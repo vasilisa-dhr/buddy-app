@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { randomUUID } = require('crypto');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 app.use(express.json());
@@ -16,6 +17,9 @@ const repoDataDir = path.join(__dirname, '..', 'data');
 const colleaguesPath = path.join(dataDir, 'colleagues.json');
 const statePath = path.join(dataDir, 'state.json');
 
+// Supabase client (assignments storage lives in DB)
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+
 function readJSON(p) {
   return JSON.parse(fs.readFileSync(p, 'utf8'));
 }
@@ -23,8 +27,9 @@ function writeJSON(p, obj) {
   fs.writeFileSync(p, JSON.stringify(obj, null, 2), 'utf8');
 }
 function ensureState() {
+  // Only manage tokens in local state file; assignments are in Supabase
   if (!fs.existsSync(statePath)) {
-    writeJSON(statePath, { tokens: {}, assignments: {} });
+    writeJSON(statePath, { tokens: {} });
   }
 }
 function ensureDataDirAndSeed() {
@@ -71,6 +76,33 @@ function derangement(n) {
   throw new Error('Failed to create derangement');
 }
 
+// === Supabase helpers ===
+async function saveAssignments(pairs) {
+  // pairs: array of rows for assignments table
+  await supabase.from('assignments').delete().neq('token', null);
+  const { error } = await supabase.from('assignments').insert(pairs);
+  if (error) throw error;
+}
+
+async function getAllAssignments() {
+  const { data, error } = await supabase
+    .from('assignments')
+    .select('*')
+    .order('giver', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+async function getByToken(token) {
+  const { data, error } = await supabase
+    .from('assignments')
+    .select('*')
+    .eq('token', token)
+    .maybeSingle();
+  if (error) return null;
+  return data;
+}
+
 app.get('/', (req, res) => {
   res.redirect('/admin');
 });
@@ -79,29 +111,42 @@ app.get('/claim/:token', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'claim.html'));
 });
 
-app.post('/api/assign', (req, res) => {
-  const token = req.body.token;
-  if (!token) return res.status(400).json({ error: 'token required' });
-  const people = loadColleaguesWithTokens();
-  const state = readJSON(statePath);
+app.post('/api/assign', async (req, res) => {
+  try {
+    const token = req.body.token;
+    if (!token) return res.status(400).json({ error: 'token required' });
+    const people = loadColleaguesWithTokens();
 
-  const tokenToIndex = new Map(people.map((p, i) => [p.token, i]));
-  const idx = tokenToIndex.get(token);
-  if (idx === undefined) return res.status(404).json({ error: 'invalid token' });
+    const tokenToIndex = new Map(people.map((p, i) => [p.token, i]));
+    const idx = tokenToIndex.get(token);
+    if (idx === undefined) return res.status(404).json({ error: 'invalid token' });
 
-  // If no assignments yet, compute global once
-  if (!state.assignments || Object.keys(state.assignments).length === 0) {
-    const perm = derangement(people.length);
-    state.assignments = {};
-    for (let i = 0; i < people.length; i++) {
-      state.assignments[people[i].token] = people[perm[i]].token;
+    // Check if assignments exist in DB
+    const existing = await getByToken(token);
+    if (!existing) {
+      // Generate full derangement and store to DB
+      const perm = derangement(people.length);
+      const rows = [];
+      for (let i = 0; i < people.length; i++) {
+        const giver = people[i];
+        const receiver = people[perm[i]];
+        rows.push({
+          token: giver.token,
+          giver: giver.name,
+          receiver_token: receiver.token,
+          receiver: receiver.name
+        });
+      }
+      await saveAssignments(rows);
     }
-    writeJSON(statePath, state);
-  }
 
-  const assigneeToken = state.assignments[token];
-  const assignee = people.find(p => p.token === assigneeToken);
-  return res.json({ assignee });
+    const row = await getByToken(token);
+    const assignee = row ? people.find(p => p.token === row.receiver_token) : null;
+    return res.json({ assignee });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: 'internal error' });
+  }
 });
 
 app.get('/api/whoami/:token', (req, res) => {
@@ -115,26 +160,37 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
 
-app.post('/admin/reset', (req, res) => {
-  ensureState();
-  writeJSON(statePath, { tokens: readJSON(statePath).tokens || {}, assignments: {} });
-  res.json({ ok: true });
+app.post('/admin/reset', async (req, res) => {
+  try {
+    await supabase.from('assignments').delete().neq('token', null);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'failed to reset' });
+  }
 });
 
-app.get('/admin/export.csv', (req, res) => {
-  const people = loadColleaguesWithTokens();
-  const state = readJSON(statePath);
-  const header = 'Даритель,ДР,Годовщина,Подопечный,ДР подопечного,Годовщина подопечного,Ссылка\n';
-  let csv = header;
-  for (const giver of people) {
-    const receiver = people.find(p => p.token === state.assignments[giver.token]);
-    if (!receiver) continue;
-    const claimUrl = `/claim/${giver.token}`;
-    csv += `${giver.name},${giver.birthday},${giver.anniversary},${receiver.name},${receiver.birthday},${receiver.anniversary},${claimUrl}\n`;
+app.get('/admin/export.csv', async (req, res) => {
+  try {
+    const people = loadColleaguesWithTokens();
+    const rows = await getAllAssignments();
+    const tokenToPerson = new Map(people.map(p => [p.token, p]));
+    const header = 'Даритель,ДР,Годовщина,Подопечный,ДР подопечного,Годовщина подопечного,Ссылка\n';
+    let csv = header;
+    for (const row of rows) {
+      const giver = tokenToPerson.get(row.token);
+      const receiver = tokenToPerson.get(row.receiver_token);
+      if (!giver || !receiver) continue;
+      const claimUrl = `/claim/${giver.token}`;
+      csv += `${giver.name},${giver.birthday},${giver.anniversary},${receiver.name},${receiver.birthday},${receiver.anniversary},${claimUrl}\n`;
+    }
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="assignments.csv"');
+    res.send(csv);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send('failed');
   }
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', 'attachment; filename="assignments.csv"');
-  res.send(csv);
 });
 
 const PORT = process.env.PORT || 3000;
