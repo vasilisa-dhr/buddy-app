@@ -145,7 +145,7 @@ app.post('/api/assign', async (req, res) => {
     return res.json({ assignee });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ error: 'internal error' });
+    return res.status(500).json({ error: 'internal error', detail: String(e && e.message ? e.message : e) });
   }
 });
 
@@ -203,7 +203,19 @@ app.get('/admin/export.csv', async (req, res) => {
     res.send(csv);
   } catch (e) {
     console.error(e);
-    res.status(500).send('failed');
+    res.status(500).send('failed: ' + String(e && e.message ? e.message : e));
+  }
+});
+
+// Simple health endpoint to validate Supabase connectivity
+app.get('/admin/health', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('assignments').select('token', { count: 'estimated', head: true });
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('health error', e);
+    res.status(500).json({ ok: false, error: String(e && e.message ? e.message : e) });
   }
 });
 
