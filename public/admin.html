@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin — Secret Buddy</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Админ</h1>
+    <div class="actions">
+      <a class="btn" href="/admin/export.csv">Скачать CSV</a>
+      <a class="btn" href="/admin/links.csv">Ссылки</a>
+    </div>
+    <table class="table" id="table">
+      <thead>
+        <tr>
+          <th>Даритель</th>
+          <th>Подопечный</th>
+          <th>ДР подопечного</th>
+          <th>Годовщина подопечного</th>
+          <th>Ссылка</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </main>
+  <script>
+    async function load() {
+      const res = await fetch('/admin/export.csv');
+      if (!res.ok) return;
+      const text = await res.text();
+      const rows = text.trim().split('\n').slice(1).map(r => r.split(','));
+      const tbody = document.querySelector('#table tbody');
+      tbody.innerHTML = '';
+      for (const r of rows) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r[0]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[5]}</td><td><code>${r[6]}</code></td>`;
+        tbody.appendChild(tr);
+      }
+    }
+    load();
+  </script>
+</body>
+</html>
+
+

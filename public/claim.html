@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Secret Buddy</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Secret Buddy</h1>
+    <div id="content"></div>
+    <script>
+      async function load() {
+        const token = location.pathname.split('/').pop();
+        const who = await fetch(`/api/whoami/${token}`).then(r => r.json());
+        const me = who.me;
+        const content = document.getElementById('content');
+        if (!me) { content.textContent = 'Неверная ссылка'; return; }
+        const btn = document.createElement('button');
+        btn.textContent = 'Получить подопечного';
+        btn.className = 'btn';
+        const card = (p) => `
+          <div class="card">
+            <h2>Твой подопечный:</h2>
+            <p class="name">${p.name}</p>
+            <ul class="dates">
+              <li>День рождения: <strong>${p.birthday}</strong></li>
+              <li>Годовщина: <strong>${p.anniversary}</strong></li>
+            </ul>
+          </div>`;
+        const result = document.createElement('div');
+        content.innerHTML = `<p>Привет, <strong>${me.name}</strong>!</p>`;
+        content.appendChild(btn);
+        content.appendChild(result);
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          const res = await fetch('/api/assign', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
+          }).then(r => r.json());
+          if (res.assignee) {
+            result.innerHTML = card(res.assignee);
+          } else {
+            result.textContent = res.error || 'Ошибка';
+          }
+        });
+      }
+      load();
+    </script>
+  </main>
+</body>
+</html>
+
+

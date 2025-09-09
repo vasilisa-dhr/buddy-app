@@ -1,0 +1,13 @@
+body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; padding: 0; background: #fafafa; color: #222; }
+.container { max-width: 800px; margin: 40px auto; padding: 0 16px; }
+h1 { margin: 0 0 16px; font-size: 28px; }
+.btn { display: inline-block; padding: 10px 16px; background: #2d6cdf; color: #fff; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; }
+.btn:hover { background: #1e54b7; }
+.table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+.table th, .table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+.card { background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 16px; margin-top: 16px; }
+.name { font-size: 20px; font-weight: 600; }
+.dates { list-style: none; padding: 0; margin: 8px 0 0; }
+.dates li { margin: 6px 0; }
+
+
