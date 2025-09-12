@@ -174,6 +174,20 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'admin.html'));
 });
 
+app.get('/select', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'select.html'));
+});
+
+app.get('/api/participants', (req, res) => {
+  try {
+    const people = loadColleaguesWithTokens();
+    res.json(people);
+  } catch (e) {
+    console.error('participants error', e);
+    res.status(500).json({ error: 'failed to load participants' });
+  }
+});
+
 app.post('/admin/reset', async (req, res) => {
   try {
     // Очищаем файл assignments.json

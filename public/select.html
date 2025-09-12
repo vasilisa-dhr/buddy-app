@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Secret Buddy — Выбери себя</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>🎄 Secret Buddy 🎁</h1>
+    <div class="welcome-text">
+      Привет! 👋<br>
+      Выбери свое имя из списка, чтобы узнать, кому ты будешь дарить подарок:
+    </div>
+    <div id="participants-list"></div>
+    <div id="result"></div>
+  </main>
+  <script>
+    async function loadParticipants() {
+      try {
+        const res = await fetch('/api/participants');
+        if (!res.ok) throw new Error('Failed to load participants');
+        const participants = await res.json();
+        
+        const list = document.getElementById('participants-list');
+        list.className = 'participants-list';
+        list.innerHTML = '';
+        
+        participants.forEach(participant => {
+          const button = document.createElement('button');
+          button.className = 'btn btn-primary participant-btn';
+          button.textContent = `${participant.name}`;
+          button.onclick = () => selectParticipant(participant.token);
+          list.appendChild(button);
+        });
+      } catch (error) {
+        document.getElementById('participants-list').innerHTML = 
+          '<p style="color: #dc3545;">Ошибка загрузки участников</p>';
+      }
+    }
+
+    async function selectParticipant(token) {
+      const result = document.getElementById('result');
+      result.innerHTML = '<div class="welcome-text">Загружаем твоего подопечного... ⏳</div>';
+      
+      try {
+        const res = await fetch('/api/assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        });
+        
+        const data = await res.json();
+        
+        if (data.assignee) {
+          result.innerHTML = `
+            <div class="card">
+              <h2 style="color: #E32213; margin-bottom: 16px;">🎉 Твой подопечный:</h2>
+              <p class="name">${data.assignee.name}</p>
+              <ul class="dates">
+                <li>🎂 День рождения: <strong>${data.assignee.birthday}</strong></li>
+                <li>💍 Годовщина: <strong>${data.assignee.anniversary}</strong></li>
+              </ul>
+            </div>
+          `;
+        } else {
+          result.innerHTML = `<div class="welcome-text" style="color: #dc3545;">Ошибка: ${data.error || 'Неизвестная ошибка'}</div>`;
+        }
+      } catch (error) {
+        result.innerHTML = `<div class="welcome-text" style="color: #dc3545;">Ошибка: ${error.message}</div>`;
+      }
+    }
+
+    loadParticipants();
+  </script>
+</body>
+</html>

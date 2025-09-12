@@ -125,5 +125,16 @@ h1 {
   justify-content: center;
   margin: 24px 0;
 }
+.participants-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+.participant-btn {
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 18px;
+}
 
 
