@@ -120,5 +120,10 @@ h1 {
   color: #E32213;
   font-weight: 700;
 }
+.button-container {
+  display: flex;
+  justify-content: center;
+  margin: 24px 0;
+}
 
 

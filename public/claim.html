@@ -30,8 +30,12 @@
             </ul>
           </div>`;
         const result = document.createElement('div');
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'button-container';
+        buttonContainer.appendChild(btn);
+        
         content.innerHTML = `<div class="welcome-text">Привет, <strong>${me.name}</strong>! 👋<br>Готов узнать, кому ты будешь дарить подарок?</div>`;
-        content.appendChild(btn);
+        content.appendChild(buttonContainer);
         content.appendChild(result);
         btn.addEventListener('click', async () => {
           btn.disabled = true;
