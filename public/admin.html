@@ -12,6 +12,7 @@
     <div class="actions">
       <a class="btn" href="/admin/export.csv">Скачать CSV</a>
       <a class="btn" href="/admin/links.csv">Ссылки</a>
+      <button class="btn btn-danger" onclick="resetAssignments()">Сбросить жеребьевку</button>
     </div>
     <table class="table" id="table">
       <thead>
@@ -40,6 +41,25 @@
         tbody.appendChild(tr);
       }
     }
+
+    async function resetAssignments() {
+      if (!confirm('Вы уверены, что хотите сбросить жеребьевку? Это удалит все текущие назначения и позволит провести новую жеребьевку.')) {
+        return;
+      }
+      
+      try {
+        const res = await fetch('/admin/reset', { method: 'POST' });
+        if (res.ok) {
+          alert('Жеребьевка сброшена! Теперь можно провести новую жеребьевку.');
+          load(); // Перезагружаем таблицу
+        } else {
+          alert('Ошибка при сбросе жеребьевки');
+        }
+      } catch (error) {
+        alert('Ошибка при сбросе жеребьевки: ' + error.message);
+      }
+    }
+
     load();
   </script>
 </body>

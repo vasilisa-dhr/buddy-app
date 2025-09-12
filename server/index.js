@@ -176,6 +176,18 @@ app.get('/admin', (req, res) => {
 
 app.post('/admin/reset', async (req, res) => {
   try {
+    // Очищаем файл assignments.json
+    writeJSON(localAssignmentsPath, []);
+    
+    // Если используем Supabase, очищаем таблицу assignments
+    if (hasSupabase) {
+      const { error } = await supabase
+        .from('assignments')
+        .delete()
+        .neq('token', ''); // Удаляем все записи
+      if (error) throw error;
+    }
+    
     res.json({ ok: true });
   } catch (e) {
     console.error(e);
