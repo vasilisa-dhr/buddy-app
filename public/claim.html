@@ -8,7 +8,7 @@
 </head>
 <body>
   <main class="container">
-    <h1>Secret Buddy</h1>
+    <h1>🎄 Secret Buddy 🎁</h1>
     <div id="content"></div>
     <script>
       async function load() {
@@ -18,19 +18,19 @@
         const content = document.getElementById('content');
         if (!me) { content.textContent = 'Неверная ссылка'; return; }
         const btn = document.createElement('button');
-        btn.textContent = 'Получить подопечного';
-        btn.className = 'btn';
+        btn.textContent = '🎁 Получить подопечного 🎄';
+        btn.className = 'btn btn-primary';
         const card = (p) => `
           <div class="card">
-            <h2>Твой подопечный:</h2>
+            <h2 style="color: #E32213; margin-bottom: 16px;">🎉 Твой подопечный:</h2>
             <p class="name">${p.name}</p>
             <ul class="dates">
-              <li>День рождения: <strong>${p.birthday}</strong></li>
-              <li>Годовщина: <strong>${p.anniversary}</strong></li>
+              <li>🎂 День рождения: <strong>${p.birthday}</strong></li>
+              <li>💍 Годовщина: <strong>${p.anniversary}</strong></li>
             </ul>
           </div>`;
         const result = document.createElement('div');
-        content.innerHTML = `<p>Привет, <strong>${me.name}</strong>!</p>`;
+        content.innerHTML = `<div class="welcome-text">Привет, <strong>${me.name}</strong>! 👋<br>Готов узнать, кому ты будешь дарить подарок?</div>`;
         content.appendChild(btn);
         content.appendChild(result);
         btn.addEventListener('click', async () => {
